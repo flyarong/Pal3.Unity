@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------------------
-//  Copyright (c) 2021-2023, Jiaqi Liu. All rights reserved.
+//  Copyright (c) 2021-2024, Jiaqi (0x7c13) Liu. All rights reserved.
 //  See LICENSE file in the project root for license information.
 // ---------------------------------------------------------------------------------------------
 
@@ -52,9 +52,9 @@ namespace Editor.SourceGenerator.Base
 
         private void WriteIndentInternal()
         {
-            for (var i = 0; i < _indentLevel; i++)
+            for (int i = 0; i < _indentLevel; i++)
             {
-                for (var j = 0; j < SpacesPerIndentLevel; j++)
+                for (int j = 0; j < SpacesPerIndentLevel; j++)
                 {
                     Buffer.Append(' ');
                 }
@@ -63,7 +63,7 @@ namespace Editor.SourceGenerator.Base
 
         public void WriteIndent()
         {
-           for (var i = 0; i < SpacesPerIndentLevel; i++) Buffer.Append(' ');
+           for (int i = 0; i < SpacesPerIndentLevel; i++) Buffer.Append(' ');
         }
     }
 }

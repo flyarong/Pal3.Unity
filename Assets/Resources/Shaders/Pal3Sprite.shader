@@ -1,3 +1,8 @@
+// ---------------------------------------------------------------------------------------------
+//  Copyright (c) 2021-2024, Jiaqi (0x7c13) Liu. All rights reserved.
+//  See LICENSE file in the project root for license information.
+// ---------------------------------------------------------------------------------------------
+
 Shader "Pal3/Sprite"
 {
     Properties
@@ -8,12 +13,12 @@ Shader "Pal3/Sprite"
     {
         Tags { "Queue" = "Transparent" }
         LOD 100
-        
+
         Pass
         {
             Blend SrcAlpha One
             ZWrite Off
-            
+
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag

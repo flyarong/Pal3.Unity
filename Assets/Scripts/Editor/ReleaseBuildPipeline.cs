@@ -1,5 +1,5 @@
 ﻿// ---------------------------------------------------------------------------------------------
-//  Copyright (c) 2021-2023, Jiaqi Liu. All rights reserved.
+//  Copyright (c) 2021-2024, Jiaqi (0x7c13) Liu. All rights reserved.
 //  See LICENSE file in the project root for license information.
 // ---------------------------------------------------------------------------------------------
 
@@ -9,7 +9,7 @@ namespace Editor
     using System.Collections.Generic;
     using System.IO;
     using System.IO.Compression;
-    using Pal3.MetaData;
+    using Pal3.Game.Constants;
     using UnityEditor;
     using UnityEditor.Build;
     using UnityEditor.Build.Reporting;
@@ -25,7 +25,7 @@ namespace Editor
         Windows_x86      = 1 << 0,
         Windows_x64      = 1 << 1,
         Linux_x86_x64    = 1 << 2,
-        MacOS_arm64_x64  = 1 << 3,
+        macOS_arm64_x64  = 1 << 3,
         Android          = 1 << 4,
         iOS              = 1 << 5,
     }
@@ -34,7 +34,7 @@ namespace Editor
     {
         private static readonly string[] BuildLevels = { "Assets/Scenes/Game.unity" };
 
-        private static readonly char PathSeparator = Path.DirectorySeparatorChar;
+        private static readonly char DirSeparator = Path.DirectorySeparatorChar;
 
         #if PAL3
         [MenuItem("PAL3/Build Pipelines/Build [Windows_x86] IL2CPP Release Executable")]
@@ -67,13 +67,13 @@ namespace Editor
         }
 
         #if PAL3
-        [MenuItem("PAL3/Build Pipelines/Build [MacOS_arm64_x64] IL2CPP XCode Project")]
+        [MenuItem("PAL3/Build Pipelines/Build [macOS_arm64_x64] IL2CPP XCode Project")]
         #elif PAL3A
-        [MenuItem("PAL3A/Build Pipelines/Build [MacOS_arm64_x64] IL2CPP XCode Project")]
+        [MenuItem("PAL3A/Build Pipelines/Build [macOS_arm64_x64] IL2CPP XCode Project")]
         #endif
-        public static void Build_MacOS_arm64_x64()
+        public static void Build_macOS_arm64_x64()
         {
-            BuildGame(Pal3BuildTarget.MacOS_arm64_x64);
+            BuildGame(Pal3BuildTarget.macOS_arm64_x64);
         }
 
         #if PAL3
@@ -97,16 +97,16 @@ namespace Editor
         }
 
         #if PAL3
-        [MenuItem("PAL3/Build Pipelines/Build All [Windows, Linux, MacOS, Android, iOS]")]
+        [MenuItem("PAL3/Build Pipelines/Build All [Windows, Linux, macOS, Android, iOS]")]
         #elif PAL3A
-        [MenuItem("PAL3A/Build Pipelines/Build All [Windows, Linux, MacOS, Android, iOS]")]
+        [MenuItem("PAL3A/Build Pipelines/Build All [Windows, Linux, macOS, Android, iOS]")]
         #endif
         public static void BuildAll()
         {
             BuildGame(Pal3BuildTarget.Windows_x86 |
                       Pal3BuildTarget.Windows_x64 |
                       Pal3BuildTarget.Linux_x86_x64 |
-                      Pal3BuildTarget.MacOS_arm64_x64 |
+                      Pal3BuildTarget.macOS_arm64_x64 |
                       Pal3BuildTarget.Android |
                       Pal3BuildTarget.iOS);
         }
@@ -127,19 +127,18 @@ namespace Editor
             BuildTarget targetBeforeBuild = EditorUserBuildSettings.activeBuildTarget;
 
             string buildOutputPath = EditorUtility.SaveFolderPanel("Choose Location of Built Game", "", "");
+            if (string.IsNullOrWhiteSpace(buildOutputPath)) return;
 
-            if (string.IsNullOrEmpty(buildOutputPath)) return;
-
-            buildOutputPath += $"{PathSeparator}{PlayerSettings.bundleVersion}{PathSeparator}";
+            buildOutputPath += $"{DirSeparator}{PlayerSettings.bundleVersion}{DirSeparator}";
 
             var buildConfigurations = new[]
             {
-                new { Platform = Pal3BuildTarget.Windows_x86, Extension = ".exe", Group = BuildTargetGroup.Standalone, Target = BuildTarget.StandaloneWindows },
-                new { Platform = Pal3BuildTarget.Windows_x64, Extension = ".exe", Group = BuildTargetGroup.Standalone, Target = BuildTarget.StandaloneWindows64 },
-                new { Platform = Pal3BuildTarget.Linux_x86_x64, Extension = "", Group = BuildTargetGroup.Standalone, Target = BuildTarget.StandaloneLinux64 },
-                new { Platform = Pal3BuildTarget.MacOS_arm64_x64, Extension = "", Group = BuildTargetGroup.Standalone, Target = BuildTarget.StandaloneOSX },
-                new { Platform = Pal3BuildTarget.Android, Extension = ".apk", Group = BuildTargetGroup.Android, Target = BuildTarget.Android },
-                new { Platform = Pal3BuildTarget.iOS, Extension = "", Group = BuildTargetGroup.iOS, Target = BuildTarget.iOS },
+                new { Platform = Pal3BuildTarget.Windows_x86, Extension = ".exe", NamedTarget = NamedBuildTarget.Standalone, Target = BuildTarget.StandaloneWindows },
+                new { Platform = Pal3BuildTarget.Windows_x64, Extension = ".exe", NamedTarget = NamedBuildTarget.Standalone, Target = BuildTarget.StandaloneWindows64 },
+                new { Platform = Pal3BuildTarget.Linux_x86_x64, Extension = "", NamedTarget = NamedBuildTarget.Standalone, Target = BuildTarget.StandaloneLinux64 },
+                new { Platform = Pal3BuildTarget.macOS_arm64_x64, Extension = "", NamedTarget = NamedBuildTarget.Standalone, Target = BuildTarget.StandaloneOSX },
+                new { Platform = Pal3BuildTarget.Android, Extension = ".apk", NamedTarget = NamedBuildTarget.Android, Target = BuildTarget.Android },
+                new { Platform = Pal3BuildTarget.iOS, Extension = "", NamedTarget = NamedBuildTarget.iOS, Target = BuildTarget.iOS },
             };
 
             List<Action> logActions = new List<Action>();
@@ -150,7 +149,7 @@ namespace Editor
                 {
                     Build(config.Platform.ToString(),
                         config.Extension,
-                        config.Group,
+                        config.NamedTarget,
                         config.Target,
                         buildOutputPath,
                         logActions);
@@ -163,26 +162,26 @@ namespace Editor
             // Execute report log actions
             logActions.ForEach(action => action.Invoke());
 
-            Debug.Log($"Build for version {PlayerSettings.bundleVersion} complete! Output path: " +
+            Debug.Log($"[{nameof(ReleaseBuildPipeline)}] Build for version {PlayerSettings.bundleVersion} complete! Output path: " +
                       $"{buildOutputPath}{GameConstants.AppName}");
         }
 
         private static void Build(string folderName,
             string extension,
-            BuildTargetGroup buildTargetGroup,
+            NamedBuildTarget namedBuildTarget,
             BuildTarget buildTarget,
             string buildOutputPath,
             List<Action> logActions,
             bool deletePdbFiles = true)
         {
-            string outputFolder = buildOutputPath + $"{GameConstants.AppName}{PathSeparator}" +
-                                $"{folderName}{PathSeparator}";
+            string outputFolder = buildOutputPath + $"{GameConstants.AppName}{DirSeparator}" +
+                                $"{folderName}{DirSeparator}";
 
             if (buildTarget is BuildTarget.StandaloneWindows
                 or BuildTarget.StandaloneWindows64
                 or BuildTarget.StandaloneLinux64)
             {
-                outputFolder += $"{GameConstants.AppName}{PathSeparator}";
+                outputFolder += $"{GameConstants.AppName}{DirSeparator}";
             }
             else if (buildTarget is BuildTarget.StandaloneOSX)
             {
@@ -194,7 +193,7 @@ namespace Editor
 
             string outputPath = outputFolder + $"{GameConstants.AppName}{extension}";
 
-            PlayerSettings.SetScriptingBackend(buildTargetGroup, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(namedBuildTarget, ScriptingImplementation.IL2CPP);
 
             BuildReport report = BuildPipeline.BuildPlayer(BuildLevels, outputPath, buildTarget, BuildOptions.None);
 
@@ -212,7 +211,7 @@ namespace Editor
             switch (report.summary.result)
             {
                 case BuildResult.Succeeded:
-                    string successReport = $"Build [{report.summary.platform}] succeeded. " +
+                    string successReport = $"[{nameof(ReleaseBuildPipeline)}] Build [{report.summary.platform}] succeeded. " +
                                            $"Finished in {report.summary.totalTime.TotalMinutes:F2} minutes. " +
                                            $"Build size: {(report.summary.totalSize / 1024f / 1024f):F2} MB";
                     logActions.Add(() => Debug.Log(successReport));
@@ -236,8 +235,7 @@ namespace Editor
         {
             string buildOutputPath = EditorUtility.SaveFolderPanel("Choose Location of Built Game",
                 $"{PlayerSettings.bundleVersion}", $"{PlayerSettings.bundleVersion}");
-
-            if (string.IsNullOrEmpty(buildOutputPath)) return;
+            if (string.IsNullOrWhiteSpace(buildOutputPath)) return;
 
             if (!buildOutputPath.EndsWith($"{PlayerSettings.bundleVersion}"))
             {
@@ -246,22 +244,22 @@ namespace Editor
                 return;
             }
 
-            string releaseDirPath = $"{buildOutputPath}{PathSeparator}Release";
+            string releaseDirPath = $"{buildOutputPath}{DirSeparator}Release";
             Directory.CreateDirectory(releaseDirPath);
 
             List<(string FolderPath, Pal3BuildTarget Target)> buildTargets = new()
             {
-                ($"{GameConstants.AppName}{PathSeparator}{Pal3BuildTarget.Android.ToString()}{PathSeparator}{GameConstants.AppName}.apk", Pal3BuildTarget.Android),
-                ($"{GameConstants.AppName}{PathSeparator}{Pal3BuildTarget.Windows_x86.ToString()}", Pal3BuildTarget.Windows_x86),
-                ($"{GameConstants.AppName}{PathSeparator}{Pal3BuildTarget.Windows_x64.ToString()}", Pal3BuildTarget.Windows_x64),
-                ($"{GameConstants.AppName}{PathSeparator}{Pal3BuildTarget.Linux_x86_x64.ToString()}", Pal3BuildTarget.Linux_x86_x64)
+                ($"{GameConstants.AppName}{DirSeparator}{Pal3BuildTarget.Android.ToString()}{DirSeparator}{GameConstants.AppName}.apk", Pal3BuildTarget.Android),
+                ($"{GameConstants.AppName}{DirSeparator}{Pal3BuildTarget.Windows_x86.ToString()}", Pal3BuildTarget.Windows_x86),
+                ($"{GameConstants.AppName}{DirSeparator}{Pal3BuildTarget.Windows_x64.ToString()}", Pal3BuildTarget.Windows_x64),
+                ($"{GameConstants.AppName}{DirSeparator}{Pal3BuildTarget.Linux_x86_x64.ToString()}", Pal3BuildTarget.Linux_x86_x64)
             };
 
             foreach ((string folderPath, Pal3BuildTarget target) in buildTargets)
             {
-                string fullPath = $"{buildOutputPath}{PathSeparator}{folderPath}";
+                string fullPath = $"{buildOutputPath}{DirSeparator}{folderPath}";
                 string zipFileName = $"{GameConstants.AppName}_v{PlayerSettings.bundleVersion}_{target.ToString()}.zip";
-                string zipFilePath = $"{releaseDirPath}{PathSeparator}{zipFileName}";
+                string zipFilePath = $"{releaseDirPath}{DirSeparator}{zipFileName}";
 
                 if (File.Exists(fullPath) || Directory.Exists(fullPath))
                 {
